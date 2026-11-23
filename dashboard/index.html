@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Radar — pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◉</span>
+    <div>
+      <h1>Token Radar</h1>
+      <p class="tagline">Every protocol that records no token, ranked by what its token would be worth.</p>
+    </div>
+  </div>
+  <p class="meta" id="meta">Loading the snapshot…</p>
+  <nav class="jump" aria-label="Sections">
+    <a href="#board">Board</a>
+    <a href="#detail">Detail</a>
+    <a href="#live">Live tokens</a>
+    <a href="#setaside">Set aside</a>
+    <a href="#sandbox">Model sandbox</a>
+    <a href="#method">Method</a>
+  </nav>
+</header>
+
+<main>
+  <section class="stats" id="stats" aria-label="Headline figures"></section>
+
+  <section id="board" class="panel" aria-labelledby="board-h">
+    <div class="panel-head">
+      <h2 id="board-h">The board</h2>
+      <p class="hint">Click a row for its detail view and farm plan. Ranks follow implied value, not the table order.</p>
+    </div>
+    <form class="toolbar" id="toolbar" action="#board" method="get">
+      <label>Search <input type="search" id="q" placeholder="Name or slug…" autocomplete="off"></label>
+      <label>Category <select id="cat"><option value="">All categories</option></select></label>
+      <label>Chain <select id="chain"><option value="">All chains</option></select></label>
+      <label>Status <select id="status">
+        <option value="">All ranked</option>
+        <option value="watchlist">Watchlist only</option>
+        <option value="early">Early finds only</option>
+      </select></label>
+      <label>Sort by <select id="sort">
+        <option value="rank">Rank</option>
+        <option value="implied">Implied value</option>
+        <option value="tvl">TVL</option>
+        <option value="growth">7-day change</option>
+        <option value="age">Age</option>
+      </select></label>
+      <button type="button" id="reset">Reset</button>
+    </form>
+    <p class="count" id="count"></p>
+    <div class="table-wrap">
+      <table id="board-table">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Protocol</th><th>Category</th><th>Chains</th>
+            <th class="num">TVL</th><th class="num">7d</th><th class="num">Age</th>
+            <th class="num">Implied value</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="empty" hidden>No protocol matches this filter. Loosen it, or reset.</p>
+  </section>
+
+  <section id="detail" class="panel" aria-labelledby="detail-h">
+    <h2 id="detail-h">Protocol detail</h2>
+    <div id="detail-body"><p class="hint">Pick a row on the board to see its model breakdown and farm plan here.</p></div>
+  </section>
+
+  <section id="live" class="panel" aria-labelledby="live-h">
+    <h2 id="live-h">Live tokens — already trading, not ranked</h2>
+    <p class="hint">These protocols have a token, so the market prices them. The board never mixes a market price into a model's claim. Top 24 by market cap.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Protocol</th><th>Category</th><th>Chains</th><th class="num">TVL</th><th class="num">Market cap</th><th class="num">7d</th></tr>
+        </thead>
+        <tbody id="live-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="setaside" class="panel" aria-labelledby="setaside-h">
+    <h2 id="setaside-h">Set aside — pre-token, but not a launch</h2>
+    <p class="hint">These protocols record no token, yet they are not standalone launches: a wrapped, staked or bridged product of a token that already trades, a versioned pool of another protocol, or an exchange's own product. They are listed here, with the reason, instead of taking a rank on the board. The biggest ones first, by TVL.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Protocol</th><th>Category</th><th>Chains</th><th class="num">TVL</th><th>Why it is set aside</th></tr>
+        </thead>
+        <tbody id="setaside-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="sandbox" class="panel" aria-labelledby="sandbox-h">
+    <h2 id="sandbox-h">Model sandbox — change the model, re-rank the board</h2>
+    <p class="hint">The board above uses radar-2's defaults. Move a slider and apply it: the page recomputes every implied value from the snapshot's own figures and re-ranks. This changes only the page, never the submitted board.</p>
+    <div class="sliders">
+      <label>Base multiple <span id="base-v"></span><input type="range" id="base" min="0.1" max="0.6" step="0.05" value="0.3"></label>
+      <label>Growth weight <span id="growth-v"></span><input type="range" id="growth" min="0" max="1" step="0.1" value="0.6"></label>
+      <label>Maturity floor <span id="mat-v"></span><input type="range" id="mat" min="0.3" max="0.8" step="0.05" value="0.55"></label>
+    </div>
+    <div class="sandbox-actions">
+      <button type="button" id="apply">Apply model</button>
+      <button type="button" id="sandbox-reset">Back to radar-2</button>
+      <span class="sandbox-note" id="sandbox-note"></span>
+    </div>
+  </section>
+
+  <section id="method" class="panel" aria-labelledby="method-h">
+    <h2 id="method-h">How the value is built</h2>
+    <p class="formula">implied = TVL^0.92 × 0.30 × growth × maturity × breadth × category</p>
+    <ul class="method-list">
+      <li><strong>Size.</strong> TVL to the power 0.92, so value grows with size but sublinearly: a protocol twice as big is not twice as valuable as a launch.</li>
+      <li><strong>Growth.</strong> The 7-day TVL change, clamped to −50%…+150%, weighted 0.60. A protocol shrinking fast scores lower; a hot one scores higher.</li>
+      <li><strong>Maturity.</strong> Days since DefiLlama began tracking it, up to 4 years: 0.55 at day zero, rising to 1.00. A long run with no token is a patience premium.</li>
+      <li><strong>Breadth.</strong> +4% per extra chain, up to 5 extra chains. Multi-chain reach counts.</li>
+      <li><strong>Category.</strong> 1.00, or 0.90 when DefiLlama names no category.</li>
+      <li><strong>Set aside, never ranked.</strong> Exchanges, versioned pools, bridges, liquid staking and restaking, and names carrying wrapped, staked or staking, or beginning with an exchange's name: they are claims on a token that already trades, so the board lists them separately with the reason instead of ranking them as launches.</li>
+    </ul>
+    <p class="caveat"><strong>Read this before you farm.</strong> “Records no token” is what DefiLlama's record says, never proof a protocol has none: a protocol on this board may still have a token its record does not carry. The implied value is this radar's own claim, not a prediction that a token is issued, when, or at what price. Never pay anyone to claim for you; claim only from a link the protocol itself publishes.</p>
+  </section>
+</main>
+
+<footer>
+  <p id="foot">Data: DefiLlama protocols snapshot, sealed for this bounty. No live data, no network: this page runs from its own files.</p>
+</footer>
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
